@@ -19,9 +19,8 @@ const CUSTOM_RANGE_KEY = 'custom'
 
 const MILLIS_PER_DAY = 24 * 60 * 60 * 1000
 
-// "live" is the websocket feed; the rest are served by /api/history, which only
-// supports trailing ranges. Zooming into the loaded window is how an exact
-// interval gets selected.
+// "live" is the websocket feed; the rest are served by /api/history - presets
+// as trailing ranges, the day picker as an exact from/to window.
 const RANGES = {
   live: { label: 'Live' },
   '7d': { unit: 'hour', days: 7 },
@@ -242,15 +241,14 @@ export class GraphDisplayManager {
     this._plotInstance.setData(this.getGraphData(), true)
   }
 
-  // viewWindow clips the plot to an exact interval after loading. The API only
-  // serves trailing ranges, so a custom interval is fetched as "everything back
-  // to its start" and then narrowed here.
-  loadHistory (key, unit, days, viewWindow) {
+  // span is either a trailing range in days or an exact { from, to } window in
+  // epoch millis. viewWindow additionally clips the plot after loading.
+  loadHistory (key, unit, span, viewWindow) {
     this._pendingRangeKey = key
 
     this.setRangeStatus('Loading...')
 
-    fetchHistory(unit, days).then(payload => {
+    fetchHistory(unit, span).then(payload => {
       // Ignore a response that a newer request has already superseded
       if (this._pendingRangeKey !== key) {
         return
@@ -284,7 +282,7 @@ export class GraphDisplayManager {
       // otherwise grow wide enough to break the header row
       const windowLabel = this._customRange
         ? `${formatDate(this._customRange.from / 1000)} to ${formatDate(this._customRange.to / 1000)}`
-        : `last ${days} days`
+        : `last ${span} days`
 
       this.setRangeStatus(`${resolution}, ${windowLabel} — drag to zoom, double click to reset`)
     }).catch(err => {
@@ -335,14 +333,13 @@ export class GraphDisplayManager {
   }
 
   handleCustomRangeSelect = (fromMillis, toMillis) => {
-    // Fetch back to the start of the selection, then narrow the view to it
-    const daysBack = Math.ceil((Date.now() - fromMillis) / MILLIS_PER_DAY)
-    const unit = daysBack <= RANGES['90d'].days ? 'hour' : 'day'
-    const maxDays = unit === 'hour' ? RANGES['90d'].days : RANGES['365d'].days * 10
+    // Hourly resolution for windows the hour unit accepts, daily beyond that
+    const spanDays = Math.ceil((toMillis - fromMillis) / MILLIS_PER_DAY)
+    const unit = spanDays <= RANGES['90d'].days ? 'hour' : 'day'
 
     this._customRange = { from: fromMillis, to: toMillis }
 
-    this.loadHistory(CUSTOM_RANGE_KEY, unit, Math.min(Math.max(daysBack, 1), maxDays), {
+    this.loadHistory(CUSTOM_RANGE_KEY, unit, { from: fromMillis, to: toMillis }, {
       from: Math.floor(fromMillis / 1000),
       to: Math.floor(toMillis / 1000)
     })
@@ -453,7 +450,7 @@ export class GraphDisplayManager {
                 const detail = this.getHistoryDetail(serverRegistration.serverId, idx)
 
                 if (detail) {
-                  return `${serverName}: ${formatNumber(point)} <span class="tooltip-muted">(${formatNumber(detail.min)}–${formatNumber(detail.max)})</span>`
+                  return `${serverName}: ${formatNumber(point)} <span class="tooltip-muted">(${formatNumber(detail.minOnlinePlayers)}–${formatNumber(detail.maxOnlinePlayers)})</span>`
                 }
 
                 return `${serverName}: ${formatNumber(point)}`
@@ -501,7 +498,10 @@ export class GraphDisplayManager {
       ],
       scales: {
         y: {
-          auto: false,
+          // auto keeps uPlot re-running the range function on every data
+          // update (1.6 skips it for auto: false); the returned range fully
+          // overrides the data extremes either way
+          auto: true,
           range: () => {
             const visibleGraphData = this.getVisibleGraphData()
             const { scaledMin, scaledMax } = RelativeScale.scaleMatrix(visibleGraphData, tickCount, maxFactor)

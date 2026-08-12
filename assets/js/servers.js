@@ -153,7 +153,10 @@ export class ServerRegistration {
       ],
       scales: {
         y: {
-          auto: false,
+          // auto keeps uPlot re-running the range function on every data
+          // update (1.6 skips it for auto: false); the returned range fully
+          // overrides the data extremes either way
+          auto: true,
           range: () => {
             const { scaledMin, scaledMax } = RelativeScale.scale(this._graphData[1], tickCount)
             return [scaledMin, scaledMax]

@@ -1,8 +1,19 @@
 // Long-term history from the /api/history rollups, normalised so it can be fed
 // to the same uPlot instance as the live data.
 
-export function fetchHistory (unit, rangeDays) {
-  return window.fetch(`/api/history?unit=${unit}&range=${rangeDays}d`).then(response => {
+// span is either a trailing range in days or an exact { from, to } window in
+// epoch millis
+export function fetchHistory (unit, span) {
+  const params = new URLSearchParams({ unit })
+
+  if (typeof span === 'number') {
+    params.set('range', `${span}d`)
+  } else {
+    params.set('from', span.from)
+    params.set('to', span.to)
+  }
+
+  return window.fetch(`/api/history?${params}`).then(response => {
     return response.json().catch(() => ({})).then(body => {
       if (!response.ok) {
         throw new Error(body.error || `Request failed with status ${response.status}`)
@@ -32,7 +43,7 @@ export function alignHistory (payload, serverRegistrations) {
 
   for (const rows of rowsByName.values()) {
     for (const row of rows) {
-      bucketSet.add(row.t)
+      bucketSet.add(row.timestamp)
     }
   }
 
@@ -49,13 +60,13 @@ export function alignHistory (payload, serverRegistrations) {
 
     if (rows) {
       for (const row of rows) {
-        rowsByBucket.set(row.t, row)
+        rowsByBucket.set(row.timestamp, row)
       }
     }
 
     series[serverRegistration.serverId] = buckets.map(bucket => {
       const row = rowsByBucket.get(bucket)
-      return row ? row.avg : null
+      return row ? row.avgOnlinePlayers : null
     })
 
     detail[serverRegistration.serverId] = buckets.map(bucket => rowsByBucket.get(bucket) || null)
