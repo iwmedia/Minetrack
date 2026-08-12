@@ -44,7 +44,7 @@ For updates and release notes, please read the [CHANGELOG](docs/CHANGELOG.md).
 
 ## Installation
 1. Node 22+ is required (you can check your version using `node -v`)
-2. Make sure everything is correct in ```config.json```. Every value can also be overridden via an environment variable named after its key path, e.g. ```SITE_PORT```, ```LOG_TO_DATABASE```, ```RETENTION_RAW_PINGS_DAYS```.
+2. Make sure everything is correct in ```config.json``` — every value can also be overridden via environment variables (see table below).
 3. Add/remove servers by inserting documents into the MongoDB ```servers``` collection: ```{ name, ip, type: "JAVA"|"BEDROCK" }``` (optional: ```port```, ```color```, ```pinnedProtocol``` — pins pings to one protocol id for servers whose proxy resets unknown protocols; disables supported-version detection for that server). Changes require a restart.
 4. Run ```npm install```
 5. Run ```npm run build``` (this bundles `assets/` into `dist/`)
@@ -56,6 +56,26 @@ Minecraft protocol versions are fetched at startup from [PrismarineJS/minecraft-
 
 Database logging is disabled by default. You can enable it in ```config.json``` by setting ```logToDatabase``` to true.
 This requires a MongoDB instance. Set the connection string via the ```MONGO_URI``` environment variable, e.g. ```MONGO_URI=mongodb://localhost:27017/minetrack```. If the URI does not include a database name, ```minetrack``` is used.
+
+### Environment variables
+`MONGO_URI` is required; everything else is optional and falls back to the value in `config.json`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `MONGO_URI` | — (required) | MongoDB connection string; the database name is taken from the URI path (`minetrack` if omitted) |
+| `SITE_PORT` | `8080` | HTTP/WebSocket port |
+| `SITE_IP` | `0.0.0.0` | Bind address |
+| `RATES_PING_ALL` | `3000` | Interval between ping rounds in ms |
+| `RATES_CONNECT_TIMEOUT` | `2500` | Ping connect timeout in ms |
+| `LOG_TO_DATABASE` | `true` | Log pings to MongoDB and enable the history graph |
+| `LOG_FAILED_PINGS` | `true` | Log failed pings |
+| `GRAPH_DURATION` | `86400000` | Time window of the history graph in ms |
+| `SERVER_GRAPH_DURATION` | `180000` | Time window of the per-server graphs in ms |
+| `RETENTION_ENABLED` | `true` | Run hourly/daily rollups and raw-ping retention |
+| `RETENTION_INTERVAL` | `3600000` | Maintenance interval in ms |
+| `RETENTION_RAW_PINGS_DAYS` | `7` | Days of raw pings to keep |
+| `RETENTION_KEEP_HOURLY_DAYS` | `0` | Days of hourly rollups to keep (`0` = forever) |
+| `TIME_SERIES` | `false` | Store raw pings in a MongoDB time-series collection (requires MongoDB 6.0+) |
 
 ### Long-term tracking
 Raw pings are kept for `retention.rawPingsDays` (default: 7) and continuously aggregated into hourly and daily rollups (min/max/avg player counts, capacity and uptime per server). The rollups are kept forever (`retention.keepHourlyDays` optionally trims the hourly level) and are served as JSON:
