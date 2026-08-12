@@ -3,7 +3,7 @@ const App = require('./lib/app')
 const logger = require('./lib/logger')
 const minecraftVersions = require('./lib/minecraftVersions')
 
-const config = require('./config')
+const config = require('./lib/config')
 
 const app = new App()
 

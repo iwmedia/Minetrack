@@ -44,7 +44,7 @@ For updates and release notes, please read the [CHANGELOG](docs/CHANGELOG.md).
 
 ## Installation
 1. Node 22+ is required (you can check your version using `node -v`)
-2. Make sure everything is correct in ```config.json```.
+2. Make sure everything is correct in ```config.json```. Every value can also be overridden via an environment variable named after its key path, e.g. ```SITE_PORT```, ```LOG_TO_DATABASE```, ```RETENTION_RAW_PINGS_DAYS```.
 3. Add/remove servers by inserting documents into the MongoDB ```servers``` collection: ```{ name, ip, type: "JAVA"|"BEDROCK" }``` (optional: ```port```, ```color```, ```pinnedProtocol``` — pins pings to one protocol id for servers whose proxy resets unknown protocols; disables supported-version detection for that server). Changes require a restart.
 4. Run ```npm install```
 5. Run ```npm run build``` (this bundles `assets/` into `dist/`)
