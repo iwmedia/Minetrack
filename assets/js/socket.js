@@ -1,3 +1,5 @@
+import { getServerColor } from './theme'
+
 export class SocketManager {
   constructor (app) {
     this._app = app
@@ -91,7 +93,6 @@ export class SocketManager {
             this._app.graphDisplayManager.redraw()
           }
 
-          this._app.percentageBar.redraw()
           this._app.updateGlobalStats()
 
           break
@@ -101,7 +102,8 @@ export class SocketManager {
           this._app.graphDisplayManager.buildPlotInstance(payload.timestamps, payload.graphData)
 
           // Build checkbox elements for graph controls
-          let lastRowCounter = 0
+          // A flat list, wrapped and packed by CSS, so the layout fits the
+          // number of servers instead of a fixed column count
           let controlsHTML = ''
 
           this._app.serverRegistry.getServerRegistrations()
@@ -110,19 +112,14 @@ export class SocketManager {
             .forEach(serverName => {
               const serverRegistration = this._app.serverRegistry.getServerRegistration(serverName)
 
-              controlsHTML += `<td><label>
-                <input type="checkbox" class="graph-control" minetrack-server-id="${serverRegistration.serverId}" ${serverRegistration.isVisible ? 'checked' : ''}>
-                ${serverName}
-                </label></td>`
-
-              // Occasionally break table rows using a magic number
-              if (++lastRowCounter % 6 === 0) {
-                controlsHTML += '</tr><tr>'
-              }
+              // The chip carries the server's plot colour, which turns the
+              // controls into the graph's legend. Kept on one line: stray
+              // whitespace would become its own flex item.
+              controlsHTML += `<label class="graph-control-item" style="--chip-color: ${getServerColor(serverRegistration)}"><input type="checkbox" class="graph-control" minetrack-server-id="${serverRegistration.serverId}" ${serverRegistration.isVisible ? 'checked' : ''}>${serverName}</label>`
             })
 
           // Apply generated HTML and show controls
-          document.getElementById('big-graph-checkboxes').innerHTML = `<table><tr>${controlsHTML}</tr></table>`
+          document.getElementById('big-graph-checkboxes').innerHTML = controlsHTML
           document.getElementById('big-graph-controls').style.display = 'block'
 
           // Bind click event for updating graph data

@@ -1,3 +1,5 @@
+import { captureRects, playReorder } from './motion'
+
 const SORT_OPTIONS = [
   {
     getName: () => 'Players',
@@ -186,8 +188,12 @@ export class SortController {
     const rankIndexSort = this._app.serverRegistry.getServerRegistrations().sort(sortOption.sortFunc)
 
     // Update the DOM structure
+    const parentElement = document.getElementById('server-list')
+
+    // Measure before touching the DOM so the cards can animate to their new spot
+    const previousRects = captureRects(parentElement.children)
+
     sortedServers.forEach(function (serverRegistration) {
-      const parentElement = document.getElementById('server-list')
       const serverElement = document.getElementById(`container_${serverRegistration.serverId}`)
 
       parentElement.appendChild(serverElement)
@@ -195,5 +201,7 @@ export class SortController {
       // Set the ServerRegistration's rankIndex to its indexOf the normal sort
       serverRegistration.updateServerRankIndex(rankIndexSort.indexOf(serverRegistration))
     })
+
+    playReorder(previousRects)
   }
 }

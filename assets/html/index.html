@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
 
 <head>
 
 	<link rel="stylesheet" href="../css/main.css">
 
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;700&display=swap">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 
 	<link rel="icon" type="image/svg+xml" href="../images/logo.svg">
 
 	<meta charset="UTF-8">
+
+	<meta name="theme-color" content="#070C0E">
 
 	<script defer type="module" src="../js/main.js"></script>
 
@@ -30,8 +32,6 @@
 
 	<div id="push">
 
-		<div id="perc-bar"></div>
-
 		<header>
 			<div class="header-possible-row-break column-left">
 				<img class="logo-image" src="../images/logo.svg">
@@ -40,11 +40,26 @@
 			</div>
 
 			<div class="header-possible-row-break column-right">
+				<div id="graph-range">
+					<div class="range-select">
+						<a class="range-option range-option-active" minetrack-range="live">Live</a>
+						<a class="range-option" minetrack-range="7d">7d</a>
+						<a class="range-option" minetrack-range="30d">30d</a>
+						<a class="range-option" minetrack-range="90d">90d</a>
+						<a class="range-option" minetrack-range="365d">1y</a>
+						<a class="range-option" id="range-custom" minetrack-range="custom">Pick days</a>
+					</div>
+
+					<div id="range-picker"></div>
+				</div>
+
 				<div id="sort-by" class="header-button header-button-single"><span class="icon-sort-amount-desc"></span> Sort By<br><strong id="sort-by-text">...</strong></div>
 
-				<div id="settings-toggle" class="header-button header-button-single" style="margin-left: 20px;"><span class="icon-gears"></span> Graph Controls</div>
+				<div id="settings-toggle" class="header-button header-button-single"><span class="icon-gears"></span> Graph Controls</div>
 			</div>
 		</header>
+
+		<div id="graph-status"></div>
 
 		<div id="big-graph"></div>
 

@@ -2,76 +2,90 @@
 
 @import url(../css/icons.css);
 
+/* Colour belongs to the data, the chrome is silver. Live values and traces are
+   turquoise, everything historical or structural is silver on near-black. */
+
 * {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 :root {
-  --color-dark-gray: #A3A3A3;
-  --color-gold: #FFD700;
-  --color-dark-purple: #6c5ce7;
-  --color-light-purple: #a29bfe;
-  --color-dark-blue: #0984e3;
-  --color-light-blue: #74b9ff;
+  --ink: #070C0E;
+  --panel: #0F171A;
+  --panel-hover: #162126;
 
-  --theme-color-dark: #3B3738;
-  --theme-color-light: #EBEBEB;
+  --rule: #1E2C31;
+  --rule-strong: #2C3D43;
 
-  --border-radius: 1px;
+  --silver: #CBD6D9;
+  --silver-dim: #7A8B91;
+  --silver-faint: #4A585D;
 
-  /* Light theme */
-  --color-purple: var(--color-light-purple);
-  --color-blue: var(--color-light-blue);
-  --color-blue-inverted: var(--color-dark-blue);
-  --background-color: var(--theme-color-light);
-  --text-decoration-color: var(--theme-color-dark);
-  --text-color: #000;
-  --text-color-inverted: #FFF;
+  --signal: #37E0C3;
+  --signal-deep: #0F7F72;
+
+  --alert: #FF6F5E;
+  --brass: #E3BE6B;
+
+  /* Fallback colours for servers without a "color" in servers.json. Read by js/theme.js */
+  --series-1: #37E0C3;
+  --series-2: #4FA8FF;
+  --series-3: #A78BFA;
+  --series-4: #F2C14E;
+  --series-5: #FF7A6B;
+  --series-6: #6EE787;
+  --series-7: #E879C7;
+  --series-8: #8FA3AD;
+
+  --radius: 6px;
+  --radius-sm: 3px;
+
+  /* --ease-out is shared with js/motion.js so every movement reads the same */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --speed: 160ms;
+
+  --font-display: "Chivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-body {
-  background: #212021;
-  color: #FFF;
-}
+/* Base */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-purple: var(--color-dark-purple);
-    --color-blue: var(--color-dark-blue);
-    --color-blue-inverted: var(--color-light-blue);
-    --background-color: var(--theme-color-dark);
-    --text-decoration-color: var(--theme-color-light);
-    --text-color: #FFF;
-    --text-color-inverted: #000;
-  }
-
-  body {
-    background: #1c1b1c;
-    color: #FFF;
-  }
-}
-
-body {
-  font-family: "Open Sans", sans-serif;
-  font-size: 18px;
-  font-weight: 300;
-  min-width: 800px;
-}
-
-/* Page layout */
 html, body {
-    height: 100%;
+  height: 100%;
+}
+
+body {
+  background: var(--ink);
+  color: var(--silver);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+  min-width: 800px;
+  -webkit-font-smoothing: antialiased;
+}
+
+strong {
+  font-weight: 700;
+  color: var(--silver);
 }
 
 a {
+  color: var(--signal);
   text-decoration: none;
-  color: var(--color-blue);
+  transition: color var(--speed) var(--ease-soft);
 }
 
 a:hover {
-  color: var(--background-color);
+  color: var(--silver);
   cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
 }
 
 #push {
@@ -80,19 +94,28 @@ a:hover {
   min-height: 100%;
 }
 
-strong {
-    font-weight: 700;
-}
+/* Tabular figures so player counts align across cards */
 
-/* Logo */
-.logo-text {
-  letter-spacing: -3px;
+.server-value,
+.server-highlighted-value,
+.server-rank,
+.global-stat,
+#sort-by-text,
+#status-text,
+#tooltip {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* Header */
+
+/* flow-root rather than overflow: auto so the floats are still contained but
+   the day picker can hang out of the header instead of being clipped */
 header {
-  overflow: auto;
-  padding: 20px;
+  display: flow-root;
+  padding: 26px 32px 22px;
+  border-bottom: 1px solid var(--rule);
 }
 
 header .column-left {
@@ -104,116 +127,424 @@ header .column-right {
 }
 
 header .logo-image {
-  --fixed-logo-image-size: 36px;
+  --fixed-logo-image-size: 34px;
   width: var(--fixed-logo-image-size);
   height: var(--fixed-logo-image-size);
-  margin-right: 5px;
+  margin-right: 10px;
   display: inline-block;
+  vertical-align: middle;
 }
 
 header .logo-text {
-  font-size: 48px;
-  margin: -6px 0;
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
   display: inline-block;
+  vertical-align: middle;
+  color: var(--silver);
 }
 
 header .logo-status {
-  font-size: 21px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--silver-dim);
+  margin-top: 10px;
 }
 
+.global-stat {
+  color: var(--signal);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* 60px minus 8px padding and a 1px border leaves 42px, which fits the two
+   20px lines of #sort-by exactly */
 header .header-button {
-  color: var(--text-color);
-  width: 83px;
-  height: 83px;
-  text-align: center;
+  box-sizing: border-box;
+  height: 60px;
+  padding: 8px 18px;
+  /* Both buttons are inline-block and would otherwise align on the baseline of
+     their last text line, which sits 20px lower on the two line one */
+  vertical-align: top;
+  text-align: left;
+  font-size: 13px;
   line-height: 20px;
-  font-size: 14px;
-  margin-left: -5px;
+  color: var(--silver-dim);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 
 header .header-button > span:first-of-type {
-  display: block;
-  margin-top: 10px;
-  font-size: 22px;
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 13px;
+  color: var(--silver-faint);
+  vertical-align: baseline;
 }
 
 header .header-button-single {
   display: none;
   cursor: pointer;
-  border-radius: var(--border-radius);
+  transition: background-color var(--speed) var(--ease-soft),
+              border-color var(--speed) var(--ease-soft),
+              color var(--speed) var(--ease-soft);
+}
+
+header .header-button-single + .header-button-single {
+  margin-left: 12px;
 }
 
 header .header-button-single:hover {
-  background: var(--background-color) !important;
+  background: var(--panel-hover);
+  border-color: var(--rule-strong);
+  color: var(--silver);
 }
 
-/* Footer */
-footer {
-  display: none;
-  background: var(--background-color);
-  color: var(--text-color);
-  border-top-right-radius: var(--border-radius);
-  border-top-left-radius: var(--border-radius);
-  padding: 10px 0;
-  text-align: center;
+header .header-button-single:hover > span:first-of-type {
+  color: var(--silver-dim);
+}
+
+/* Fixed width so the header does not shift when the sort value changes */
+#sort-by {
+  min-width: 150px;
+}
+
+#sort-by-text {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--silver);
+}
+
+#settings-toggle {
+  line-height: 42px;
+}
+
+/* Historical graph */
+
+#big-graph {
+  padding-right: 65px;
+  padding-top: 10px;
+  padding-bottom: 8px;
+}
+
+#big-graph, #big-graph-controls, #big-graph-checkboxes {
   width: 90%;
-  margin: 15px auto 0 auto;
 }
 
-footer a {
-  color: var(--color-blue-inverted);
+#big-graph {
+  margin: 0 auto;
 }
 
-footer a:hover {
-  color: var(--text-color);
+#big-graph-controls {
+  margin: 4px auto 24px;
+  display: none;
 }
 
-/* Status overly */
-#status-overlay {
-  padding: 20px 0;
-  background: var(--background-color);
-  color: var(--text-color);
-  border-radius: var(--border-radius);
-  text-align: center;
-  height: 150px;
-  width: 350px;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  margin-top: -95px;
-  margin-left: -175px;
+#big-graph-controls-drawer {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding-bottom: 16px;
+  overflow: auto;
+  display: none;
+  /* Started by graph.js flipping display */
+  animation: rise 280ms var(--ease-out);
 }
 
-#status-overlay .logo-image {
-  --fixed-logo-image-size: 72px;
-  width: var(--fixed-logo-image-size);
-  height: var(--fixed-logo-image-size);
+#big-graph-checkboxes {
+  margin: 18px auto 0 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--silver-dim);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
 }
 
-/* Floating tooltip */
-#tooltip {
+/* The controls are the graph's legend, so each chip carries that server's plot
+   colour in --chip-color, set inline by socket.js */
+.graph-control-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--silver);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--speed) var(--ease-soft),
+              color var(--speed) var(--ease-soft);
+}
+
+.graph-control-item:hover {
+  background: var(--panel-hover);
+}
+
+/* Hidden servers read as switched off. Progressive enhancement: without
+   :has() support the chip simply stays at full strength. */
+.graph-control-item:has(.graph-control:not(:checked)) {
+  color: var(--silver-faint);
+}
+
+/* The checkbox itself is the colour swatch: filled when the series is shown,
+   hollow when it is hidden. It stays a real input so it keeps its keyboard
+   behaviour and graph.js can go on reading .checked */
+.graph-control {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  border-radius: 2px;
+  background: var(--chip-color, var(--signal));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--speed) var(--ease-soft),
+              box-shadow var(--speed) var(--ease-soft);
+}
+
+.graph-control:not(:checked) {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--chip-color, var(--silver-faint));
+  opacity: 0.55;
+}
+
+/* Time range selector, sitting in the header beside the other controls */
+
+#graph-range {
+  display: none;
+  position: relative;
+  vertical-align: top;
+  margin-right: 12px;
+}
+
+/* Same height as the header buttons so the row reads as one band of controls */
+.range-select {
+  display: flex;
+  height: 60px;
+  box-sizing: border-box;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.range-option {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 58px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--silver-dim);
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--speed) var(--ease-soft),
+              color var(--speed) var(--ease-soft);
+}
+
+.range-option + .range-option {
+  border-left: 1px solid var(--rule);
+}
+
+.range-option:hover {
+  background: var(--panel-hover);
+  color: var(--silver);
+}
+
+.range-option-active {
+  background: var(--panel-hover);
+  color: var(--silver);
+  /* The only accent in the control: it marks which window you are looking at */
+  box-shadow: inset 0 -2px 0 var(--signal);
+}
+
+/* Says what the graph is currently showing, kept next to the graph itself */
+#graph-status {
+  width: 90%;
+  margin: 0 auto;
+  padding-top: 22px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--silver-faint);
+}
+
+/* Day picker */
+
+#range-picker {
   display: none;
   position: absolute;
-  padding: 5px 8px;
-  border-radius: var(--border-radius);
-  background: var(--background-color);
-  color: var(--text-color);
-  z-index: 10000;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 500;
+  width: 252px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  animation: rise 200ms var(--ease-out);
 }
 
-/* Server listing */
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.picker-month {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--silver);
+}
+
+.picker-nav {
+  width: 24px;
+  height: 24px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  color: var(--silver-dim);
+  cursor: pointer;
+  transition: background-color var(--speed) var(--ease-soft),
+              color var(--speed) var(--ease-soft);
+}
+
+.picker-nav:hover {
+  background: var(--panel-hover);
+  color: var(--silver);
+}
+
+.picker-weekdays,
+.picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.picker-weekdays {
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--silver-faint);
+}
+
+.day-cell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  color: var(--silver-dim);
+  cursor: pointer;
+  transition: background-color 100ms var(--ease-soft),
+              color 100ms var(--ease-soft);
+}
+
+.day-cell:hover {
+  background: var(--panel-hover);
+  color: var(--silver);
+}
+
+.day-cell-empty,
+.day-cell-disabled {
+  color: var(--silver-faint);
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Span between the anchored start and the day under the cursor */
+.day-cell-in-range {
+  background: var(--panel-hover);
+  color: var(--silver);
+}
+
+.day-cell-anchor {
+  background: var(--signal);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.picker-hint {
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--silver-faint);
+}
+
+.tooltip-muted {
+  color: var(--silver-faint);
+}
+
+#big-graph-controls-drawer .graph-controls-setall {
+  text-align: center;
+  display: block;
+  margin: 18px 0 4px;
+}
+
+.graph-controls-show {
+  margin: 0 3px;
+}
+
+#big-graph-controls .icon-star {
+  color: var(--brass);
+}
+
+/* Server list */
+
 #server-list {
   overflow: auto;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  padding: 4px 0 24px;
 }
 
+/* border-box is scoped to the card so the fixed columns inside
+   (80 + 282 + 417 = 779px) keep fitting the 798px content box */
 .server {
-  padding: 5px 10px;
-  margin: 0 5px;
-  width: 800px;
+  box-sizing: border-box;
+  width: 840px;
+  padding: 18px 20px;
+  margin: 5px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   display: inline-block;
+  /* No keyframes here or inside: sort.js re-appends every card on a ranking
+     change, which restarts CSS animations. Movement lives in js/motion.js */
+  transition: border-color var(--speed) var(--ease-soft),
+              background-color var(--speed) var(--ease-soft),
+              box-shadow var(--speed) var(--ease-soft);
+}
+
+.server:hover {
+  border-color: var(--rule-strong);
+  background: var(--panel-hover);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
 }
 
 .server .column {
@@ -228,14 +559,25 @@ footer a:hover {
   --fixed-server-favicon-size: 64px;
   width: var(--fixed-server-favicon-size);
   height: var(--fixed-server-favicon-size);
-  border-radius: var(--border-radius);
-  margin-top: 5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  display: block;
+  transition: border-color var(--speed) var(--ease-soft);
+}
+
+.server:hover .server-favicon {
+  border-color: var(--rule-strong);
 }
 
 .server .column-favicon .server-rank {
   display: block;
   width: 64px;
+  margin-top: 8px;
   text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--silver-faint);
 }
 
 .server .column-status {
@@ -244,33 +586,102 @@ footer a:hover {
 
 .server .column-status .server-name {
   display: inline-block;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--silver);
+  margin-bottom: 10px;
 }
 
-.server .column-status .server-error {
+/* Readout. Single class or attribute selectors only, so the role rules below
+   win on source order. */
+
+.server-label,
+.server-highlighted-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--silver-faint);
+  margin-top: 6px;
+}
+
+/* servers.js sets display once a value arrives */
+.server-label {
   display: none;
-  color: #e74c3c;
 }
 
-.server .column-status .server-label {
-  color: var(--color-dark-gray);
-  font-size: 16px;
+.server-value,
+.server-highlighted-value {
+  display: inline;
+  margin-left: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--silver);
+}
+
+/* The live count is the only turquoise text on a card and matches its sparkline,
+   so number and trace read as one signal. It also gets its own line at display
+   size while peak and record stay a quiet reference list: what is, versus what
+   was. Keyed off the ids from servers.js#initServerStatus. */
+[id^="player-count-value_"] {
+  display: block;
+  margin: 1px 0 0;
+  color: var(--signal);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+[id^="version_"] {
+  color: var(--silver-faint);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.server-error {
   display: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--alert);
 }
 
-.server .column-status .server-value {
-  color: var(--color-dark-gray);
-  font-size: 16px;
+/* The sorted category is promoted to the same form, never to another colour */
+.server-highlighted-label {
+  color: var(--silver-dim);
 }
 
+.server-highlighted-value {
+  display: block;
+  margin: 1px 0 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Height matches the plot in servers.js#buildPlotInstance */
 .server .column-graph {
-  height: 100px;
+  height: 140px;
   width: 400px;
+  padding-left: 16px;
+  border-left: 1px solid var(--rule);
 }
 
-/* Favorite icons */
+/* Favourites */
+
 .server-is-favorite {
   cursor: pointer;
-  color: var(--color-gold);
+  color: var(--brass);
+  margin-right: 4px;
+  font-size: 14px;
+  vertical-align: 2px;
 }
 
 .server-is-favorite:hover::before {
@@ -279,132 +690,217 @@ footer a:hover {
 
 .server-is-not-favorite {
   cursor: pointer;
-  color: var(--background-color);
+  color: var(--silver-faint);
+  margin-right: 4px;
+  font-size: 14px;
+  vertical-align: 2px;
+  transition: color var(--speed) var(--ease-soft);
 }
 
 .server-is-not-favorite:hover {
-  color: var(--color-gold);
+  color: var(--brass);
 }
 
-/* Highlighted values */
-.server-highlighted-label {
-  font-size: 18px;
-}
+/* Buttons */
 
-.server-highlighted-value {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-/* Global stats */
-.global-stat {
-  font-weight: 700;
-}
-
-/* Sort by */
-#sort-by {
-  background: var(--color-purple);
-}
-
-/* Settings toggle */
-#settings-toggle {
-  background: var(--color-blue);
-}
-
-/* Historical graph */
-#big-graph {
-  padding-right: 65px;
-}
-
-#big-graph, #big-graph-controls, #big-graph-checkboxes {
-    width: 90%;
-}
-
-#big-graph-checkboxes > table {
-    width: 100%;
-}
-
-#big-graph {
-  margin: 0 auto;
-}
-
-#big-graph-controls {
-  margin: 10px auto;
-  display: none;
-}
-
-.graph-controls-show {
-  color: var(--text-color);
-}
-
-#big-graph-controls .icon-star {
-  color: var(--color-gold);
-}
-
-#big-graph-controls-drawer {
-  background: var(--background-color);
-  color: var(--text-color);
-  border-radius: var(--border-radius);
-  padding-bottom: 10px;
-  overflow: auto;
-  display: none;
-}
-
-#big-graph-controls-drawer .graph-controls-setall {
-  text-align: center;
-  display: block;
-  margin: 15px 0;
-}
-
-#big-graph-checkboxes {
-  margin: 15px auto 0 auto;
-}
-
-/* Basic elements */
 .button {
-  background: var(--color-blue);
-  border-radius: var(--border-radius);
-  font-size: 16px;
-  padding: 5px 10px;
+  display: inline-block;
+  background: transparent;
+  color: var(--silver-dim);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  transition: background-color var(--speed) var(--ease-soft),
+              border-color var(--speed) var(--ease-soft),
+              color var(--speed) var(--ease-soft);
 }
 
 .button:hover {
-  background: var(--text-color);
-  color: var(--text-color-inverted);
+  background: var(--panel-hover);
+  border-color: var(--rule-strong);
+  color: var(--silver);
 }
 
-/* Percentage bar */
-#perc-bar {
-  height: 35px;
-  position: relative;
-  overflow-x: hidden;
+.button > span:first-of-type {
+  margin-right: 6px;
 }
 
-#perc-bar .perc-bar-part {
-  height: 100%;
-  display: inline-block;
+/* Tooltip */
+
+#tooltip {
+  display: none;
   position: absolute;
+  padding: 9px 12px;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  color: var(--silver-dim);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+  z-index: 10000;
+  animation: fade-in 120ms var(--ease-soft);
 }
 
-/* Header rows */
+#tooltip strong {
+  color: var(--signal);
+  font-weight: 600;
+}
+
+/* Connection overlay */
+
+#status-overlay {
+  padding: 32px 40px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  text-align: center;
+  width: 320px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: fade-in 240ms var(--ease-soft);
+}
+
+#status-overlay .logo-image {
+  --fixed-logo-image-size: 56px;
+  width: var(--fixed-logo-image-size);
+  height: var(--fixed-logo-image-size);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+#status-overlay .logo-text {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  margin: 12px 0 14px;
+  color: var(--silver);
+}
+
+#status-text {
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--silver-dim);
+}
+
+/* Footer */
+
+footer {
+  display: none;
+  border-top: 1px solid var(--rule);
+  padding: 18px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--silver-faint);
+  width: 90%;
+  margin: 0 auto;
+}
+
+footer .icon-code {
+  margin-right: 6px;
+}
+
+footer a {
+  color: var(--silver-dim);
+}
+
+footer a:hover {
+  color: var(--signal);
+}
+
+/* Reveal. Started by socket.js showing #push and the footer. The graph and the
+   cards are faded in from js/motion.js instead, each once its payload lands. */
+
+header,
+footer {
+  animation: rise 520ms var(--ease-out) backwards;
+}
+
+header {
+  animation-delay: 0ms;
+}
+
+footer {
+  animation-delay: 220ms;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* uPlot overrides */
+
+.uplot .select {
+  background: var(--signal);
+  opacity: 0.14;
+}
+
+.uplot .u-cursor-x,
+.uplot .u-cursor-y {
+  border-color: var(--rule-strong) !important;
+}
+
 @media only screen and (max-width: 1050px) {
   header {
     padding: 0 !important;
   }
 
   .header-possible-row-break {
-    padding-top: 20px;
+    padding-top: 22px;
     width: 100%;
     text-align: center;
   }
 
   .header-possible-row-break:last-of-type {
-    margin-bottom: 20px;
+    margin-bottom: 22px;
+  }
+
+  header .header-button {
+    text-align: center;
   }
 }
 
-/* uPlot.css overrides */
-.uplot .select {
-  background: var(--color-blue);
-  opacity: 0.3;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

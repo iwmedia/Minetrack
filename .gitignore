@@ -3,10 +3,7 @@ node_modules/
 
 # minetrack
 minetrack.log
-
-# minetrack/sqlite3
-database.sql
-database.sql-journal
+.env
 
 # macOS
 .DS_Store

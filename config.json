@@ -7,12 +7,15 @@
 		"pingAll": 3000,
 		"connectTimeout": 2500
 	},
-	"oldPingsCleanup": {
-		"enabled": false,
-		"interval": 3600000
+	"retention": {
+		"enabled": true,
+		"interval": 3600000,
+		"rawPingsDays": 7,
+		"keepHourlyDays": 0
 	},
+	"timeSeries": false,
 	"logFailedPings": true,
-	"logToDatabase": false,
+	"logToDatabase": true,
 	"graphDuration": 86400000,
 	"serverGraphDuration": 180000
 }

@@ -2,13 +2,33 @@ import uPlot from 'uplot'
 
 import { RelativeScale } from './scale'
 
-import { formatNumber, formatTimestampSeconds } from './util'
+import { formatNumber, formatTimestampSeconds, formatDate } from './util'
 import { uPlotTooltipPlugin } from './plugins'
+import { getChartTheme, getServerColor, CHART_FONT } from './theme'
+import { reveal } from './motion'
+import { fetchHistory, alignHistory } from './history'
+import { RangePicker } from './rangepicker'
 
 import { FAVORITE_SERVERS_STORAGE_KEY } from './favorites'
 
 const HIDDEN_SERVERS_STORAGE_KEY = 'minetrack_hidden_servers'
 const SHOW_FAVORITES_STORAGE_KEY = 'minetrack_show_favorites'
+
+const LIVE_RANGE_KEY = 'live'
+const CUSTOM_RANGE_KEY = 'custom'
+
+const MILLIS_PER_DAY = 24 * 60 * 60 * 1000
+
+// "live" is the websocket feed; the rest are served by /api/history, which only
+// supports trailing ranges. Zooming into the loaded window is how an exact
+// interval gets selected.
+const RANGES = {
+  live: { label: 'Live' },
+  '7d': { unit: 'hour', days: 7 },
+  '30d': { unit: 'hour', days: 30 },
+  '90d': { unit: 'hour', days: 90 },
+  '365d': { unit: 'day', days: 365 }
+}
 
 export class GraphDisplayManager {
   constructor (app) {
@@ -18,6 +38,28 @@ export class GraphDisplayManager {
     this._hasLoadedSettings = false
     this._initEventListenersOnce = false
     this._showOnlyFavorites = false
+
+    this._activeRangeKey = LIVE_RANGE_KEY
+    this._history = undefined
+    this._pendingRangeKey = undefined
+    this._customRange = undefined
+  }
+
+  // Everything that reads plotted values goes through these, so the scales,
+  // axis splits and tooltip follow whichever range is on screen
+  getDisplayedSeries () {
+    return this._history ? this._history.series : this._graphData
+  }
+
+  getDisplayedTimestamps () {
+    return this._history ? this._history.timestamps : this._graphTimestamps
+  }
+
+  getDisplayedData () {
+    return [
+      this.getDisplayedTimestamps(),
+      ...this.getDisplayedSeries()
+    ]
   }
 
   addGraphPoint (timestamp, playerCounts) {
@@ -52,6 +94,12 @@ export class GraphDisplayManager {
       if (series.length > graphMaxLength) {
         series.splice(0, series.length - graphMaxLength)
       }
+    }
+
+    // The live buffer keeps filling while a historical range is shown, but only
+    // the live view is redrawn from it
+    if (this._history) {
+      return
     }
 
     // Avoid redrawing the plot when zoomed
@@ -117,9 +165,12 @@ export class GraphDisplayManager {
   }
 
   getVisibleGraphData () {
+    const series = this.getDisplayedSeries()
+
     return this._app.serverRegistry.getServerRegistrations()
       .filter(serverRegistration => serverRegistration.isVisible)
-      .map(serverRegistration => this._graphData[serverRegistration.serverId])
+      .map(serverRegistration => series[serverRegistration.serverId])
+      .filter(Boolean)
   }
 
   getPlotSize () {
@@ -137,10 +188,164 @@ export class GraphDisplayManager {
   }
 
   getGraphDataPoint (serverId, index) {
-    const graphData = this._graphData[serverId]
+    const graphData = this.getDisplayedSeries()[serverId]
     if (graphData && index < graphData.length && typeof graphData[index] === 'number') {
       return graphData[index]
     }
+  }
+
+  // min/max/uptime behind a bucket, only present for historical ranges
+  getHistoryDetail (serverId, index) {
+    return this._history ? this._history.detail[serverId][index] : undefined
+  }
+
+  // Day buckets only need the date, anything finer also needs the time
+  formatBucketLabel (index) {
+    const timestamp = this.getDisplayedTimestamps()[index]
+
+    if (typeof timestamp !== 'number') {
+      return ''
+    }
+
+    if (!this._history) {
+      return formatTimestampSeconds(timestamp)
+    }
+
+    if (this._history.unit === 'day') {
+      return formatDate(timestamp)
+    }
+
+    return `${formatDate(timestamp)} ${formatTimestampSeconds(timestamp)}`
+  }
+
+  setRangeStatus (text) {
+    document.getElementById('graph-status').innerText = text || ''
+  }
+
+  updateRangeButtons () {
+    document.querySelectorAll('.range-option').forEach(element => {
+      const isActive = element.getAttribute('minetrack-range') === this._activeRangeKey
+
+      element.classList.toggle('range-option-active', isActive)
+    })
+  }
+
+  showLiveRange () {
+    this._activeRangeKey = LIVE_RANGE_KEY
+    this._pendingRangeKey = undefined
+    this._history = undefined
+    this._customRange = undefined
+
+    this.updateRangeButtons()
+    this.setRangeStatus('Live, one point per minute')
+
+    this._plotInstance.setData(this.getGraphData(), true)
+  }
+
+  // viewWindow clips the plot to an exact interval after loading. The API only
+  // serves trailing ranges, so a custom interval is fetched as "everything back
+  // to its start" and then narrowed here.
+  loadHistory (key, unit, days, viewWindow) {
+    this._pendingRangeKey = key
+
+    this.setRangeStatus('Loading...')
+
+    fetchHistory(unit, days).then(payload => {
+      // Ignore a response that a newer request has already superseded
+      if (this._pendingRangeKey !== key) {
+        return
+      }
+
+      const history = alignHistory(payload, this._app.serverRegistry.getServerRegistrations())
+
+      if (history.isEmpty) {
+        // Leave the current view alone rather than blanking the graph
+        this._pendingRangeKey = undefined
+        this.updateRangeButtons()
+        this.setRangeStatus('Nothing recorded for this range yet')
+        return
+      }
+
+      this._history = history
+      this._activeRangeKey = key
+      this._pendingRangeKey = undefined
+
+      this.updateRangeButtons()
+
+      this._plotInstance.setData(this.getDisplayedData(), true)
+
+      if (viewWindow) {
+        this._plotInstance.setScale('x', { min: viewWindow.from, max: viewWindow.to })
+      }
+
+      const resolution = history.unit === 'day' ? 'Daily averages' : 'Hourly averages'
+
+      // The picked days go here rather than onto the button, which would
+      // otherwise grow wide enough to break the header row
+      const windowLabel = this._customRange
+        ? `${formatDate(this._customRange.from / 1000)} to ${formatDate(this._customRange.to / 1000)}`
+        : `last ${days} days`
+
+      this.setRangeStatus(`${resolution}, ${windowLabel} — drag to zoom, double click to reset`)
+    }).catch(err => {
+      if (this._pendingRangeKey !== key) {
+        return
+      }
+
+      this._pendingRangeKey = undefined
+      this.updateRangeButtons()
+      this.setRangeStatus(err.message)
+    })
+  }
+
+  handleRangeClick = (event) => {
+    const key = event.currentTarget.getAttribute('minetrack-range')
+
+    // The custom option shares this class for styling but has its own handler
+    if (key === CUSTOM_RANGE_KEY) {
+      return
+    }
+
+    this._rangePicker.close()
+
+    if (key === LIVE_RANGE_KEY) {
+      this.showLiveRange()
+      return
+    }
+
+    this._customRange = undefined
+
+    const range = RANGES[key]
+
+    this.loadHistory(key, range.unit, range.days)
+  }
+
+  handleCustomRangeClick = () => {
+    this._rangePicker.toggle()
+  }
+
+  handleDocumentClick = (event) => {
+    if (!this._rangePicker || !this._rangePicker.isOpen()) {
+      return
+    }
+
+    if (!document.getElementById('graph-range').contains(event.target)) {
+      this._rangePicker.close()
+    }
+  }
+
+  handleCustomRangeSelect = (fromMillis, toMillis) => {
+    // Fetch back to the start of the selection, then narrow the view to it
+    const daysBack = Math.ceil((Date.now() - fromMillis) / MILLIS_PER_DAY)
+    const unit = daysBack <= RANGES['90d'].days ? 'hour' : 'day'
+    const maxDays = unit === 'hour' ? RANGES['90d'].days : RANGES['365d'].days * 10
+
+    this._customRange = { from: fromMillis, to: toMillis }
+
+    this.loadHistory(CUSTOM_RANGE_KEY, unit, Math.min(Math.max(daysBack, 1), maxDays), {
+      from: Math.floor(fromMillis / 1000),
+      to: Math.floor(toMillis / 1000)
+    })
   }
 
   getClosestPlotSeriesIndex (idx) {
@@ -198,9 +403,11 @@ export class GraphDisplayManager {
     this._graphTimestamps = timestamps
     this._graphData = data
 
+    const theme = getChartTheme()
+
     const series = this._app.serverRegistry.getServerRegistrations().map(serverRegistration => {
       return {
-        stroke: serverRegistration.data.color,
+        stroke: getServerColor(serverRegistration),
         width: 2,
         value: (_, raw) => `${formatNumber(raw)} Players`,
         show: serverRegistration.isVisible,
@@ -241,8 +448,16 @@ export class GraphDisplayManager {
                   serverName = `<span class="${this._app.favoritesManager.getIconClass(true)}"></span> ${serverName}`
                 }
 
+                // Historical buckets carry their spread, which is the reason to
+                // aggregate in the first place; the live feed has none
+                const detail = this.getHistoryDetail(serverRegistration.serverId, idx)
+
+                if (detail) {
+                  return `${serverName}: ${formatNumber(point)} <span class="tooltip-muted">(${formatNumber(detail.min)}–${formatNumber(detail.max)})</span>`
+                }
+
                 return `${serverName}: ${formatNumber(point)}`
-              }).join('<br>') + `<br><br><strong>${formatTimestampSeconds(this._graphTimestamps[idx])}</strong>`
+              }).join('<br>') + `<br><br><strong>${this.formatBucketLabel(idx)}</strong>`
 
             this._app.tooltip.set(pos.left, pos.top, 10, 10, text)
           } else {
@@ -261,22 +476,22 @@ export class GraphDisplayManager {
       ],
       axes: [
         {
-          font: '14px "Open Sans", sans-serif',
-          stroke: '#FFF',
+          font: CHART_FONT,
+          stroke: theme.axis,
           grid: {
             show: false
           },
           space: 60
         },
         {
-          font: '14px "Open Sans", sans-serif',
-          stroke: '#FFF',
+          font: CHART_FONT,
+          stroke: theme.axis,
           size: 65,
           grid: {
-            stroke: '#333',
+            stroke: theme.grid,
             width: 1
           },
-          split: () => {
+          splits: () => {
             const visibleGraphData = this.getVisibleGraphData()
             const { scaledMax, scale } = RelativeScale.scaleMatrix(visibleGraphData, tickCount, maxFactor)
             const ticks = RelativeScale.generateTicks(0, scaledMax, scale)
@@ -299,8 +514,17 @@ export class GraphDisplayManager {
       }
     }, this.getGraphData(), document.getElementById('big-graph'))
 
+    // Not part of the CSS reveal sequence: this payload arrives separately
+    reveal(document.getElementById('big-graph'))
+
     // Show the settings-toggle element
     document.getElementById('settings-toggle').style.display = 'inline-block'
+
+    // The range controls are only meaningful once there is a plot to retarget
+    document.getElementById('graph-range').style.display = 'inline-block'
+
+    this.updateRangeButtons()
+    this.setRangeStatus('Live, one point per minute')
   }
 
   redraw = () => {
@@ -353,6 +577,17 @@ export class GraphDisplayManager {
       document.querySelectorAll('.graph-controls-show').forEach((element) => {
         element.addEventListener('click', this.handleShowButtonClick, false)
       })
+
+      this._rangePicker = new RangePicker(document.getElementById('range-picker'), this.handleCustomRangeSelect)
+
+      document.querySelectorAll('.range-option').forEach((element) => {
+        element.addEventListener('click', this.handleRangeClick, false)
+      })
+
+      document.getElementById('range-custom').addEventListener('click', this.handleCustomRangeClick, false)
+
+      // Clicking anywhere else dismisses the picker
+      document.addEventListener('click', this.handleDocumentClick, false)
     }
 
     // These listeners should be bound each #initEventListeners call since they are for newly created elements
@@ -450,6 +685,16 @@ export class GraphDisplayManager {
     this._graphData = []
     this._hasLoadedSettings = false
 
+    // Drop the historical view so a reconnect starts on Live again
+    this._activeRangeKey = LIVE_RANGE_KEY
+    this._history = undefined
+    this._pendingRangeKey = undefined
+    this._customRange = undefined
+
+    if (this._rangePicker) {
+      this._rangePicker.close()
+    }
+
     // Fire #clearTimeout if the timeout is currently defined
     if (this._resizeRequestTimeout) {
       clearTimeout(this._resizeRequestTimeout)
@@ -460,6 +705,7 @@ export class GraphDisplayManager {
     // Reset modified DOM structures
     document.getElementById('big-graph-checkboxes').innerHTML = ''
     document.getElementById('big-graph-controls').style.display = 'none'
+    document.getElementById('graph-range').style.display = 'none'
 
     document.getElementById('settings-toggle').style.display = 'none'
   }

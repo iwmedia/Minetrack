@@ -110,15 +110,11 @@ export function formatDate (secs) {
   return date.toLocaleDateString()
 }
 
-export function formatPercent (x, over) {
-  const val = Math.round((x / over) * 100 * 10) / 10
-  return `${val}%`
-}
-
+// Grouped by the browser's locale, so a German browser gets 1.234.567
 export function formatNumber (x) {
   if (typeof x !== 'number') {
     return '-'
   } else {
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return x.toLocaleString()
   }
 }

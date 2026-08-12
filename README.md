@@ -5,6 +5,8 @@
 # Minetrack
 Minetrack makes it easy to keep an eye on your favorite Minecraft servers. Simple and hackable, Minetrack easily runs on any hardware. Use it for monitoring, analytics, or just for fun. [Check it out](https://minetrack.me).
 
+This is a fork of [Cryptkeeper/Minetrack](https://github.com/Cryptkeeper/Minetrack) that uses MongoDB instead of SQLite for database logging.
+
 ### This project is not actively supported!
 This project is not actively supported. Pull requests will be reviewed and merged (if accepted), but issues _might_ not be addressed outside of fixes provided by community members. Please share any improvements or fixes you've made so everyone can benefit from them.
 
@@ -41,17 +43,30 @@ For updates and release notes, please read the [CHANGELOG](docs/CHANGELOG.md).
 **Migrating to Minetrack 5?** See the [migration guide](docs/MIGRATING.md).
 
 ## Installation
-1. Node 12.4.0+ is required (you can check your version using `node -v`)
+1. Node 22+ is required (you can check your version using `node -v`)
 2. Make sure everything is correct in ```config.json```.
-3. Add/remove servers by editing the ```servers.json``` file
+3. Add/remove servers by inserting documents into the MongoDB ```servers``` collection: ```{ name, ip, type: "JAVA"|"BEDROCK" }``` (optional: ```port```, ```color```, ```pinnedProtocol``` — pins pings to one protocol id for servers whose proxy resets unknown protocols; disables supported-version detection for that server). Changes require a restart.
 4. Run ```npm install```
 5. Run ```npm run build``` (this bundles `assets/` into `dist/`)
 6. Run ```node main.js``` to boot the system (may need sudo!)
 
 (There's also ```install.sh``` and ```start.sh```, but they may not work for your OS.)
 
+Minecraft protocol versions are fetched at startup from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) and refreshed every 24 hours, so new Minecraft releases are picked up without a redeploy. Startup requires GitHub to be reachable.
+
 Database logging is disabled by default. You can enable it in ```config.json``` by setting ```logToDatabase``` to true.
-This requires sqlite3 drivers to be installed.
+This requires a MongoDB instance. Set the connection string via the ```MONGO_URI``` environment variable, e.g. ```MONGO_URI=mongodb://localhost:27017/minetrack```. If the URI does not include a database name, ```minetrack``` is used.
+
+### Long-term tracking
+Raw pings are kept for `retention.rawPingsDays` (default: 7) and continuously aggregated into hourly and daily rollups (min/max/avg player counts, capacity and uptime per server). The rollups are kept forever (`retention.keepHourlyDays` optionally trims the hourly level) and are served as JSON:
+
+```
+GET /api/history?unit=day&range=365d
+GET /api/history?unit=hour&range=7d
+```
+
+### MongoDB time-series storage (opt-in)
+On MongoDB 6.0+ you can set `"timeSeries": true` in `config.json` to store raw pings in a time-series collection (significantly smaller storage footprint, raw retention via TTL instead of periodic deletes). Enabling it later is cheap because raw pings are short-lived and all long-term data lives in the rollup collections: stop Minetrack, rename or drop the `pings` collection, set the flag, start again.
 
 ## Docker
 Minetrack can be built and run with Docker from this repository in several ways:
@@ -63,7 +78,8 @@ docker build . --tag minetrack:latest
 
 # start container, delete on exit
 # publish container port 8080 on host port 80
-docker run --rm --publish 80:8080 minetrack:latest
+# pass MONGO_URI if logToDatabase is enabled
+docker run --rm --publish 80:8080 --env MONGO_URI=mongodb://host:27017/minetrack minetrack:latest
 ```
 
 The published port can be changed by modifying the parameter argument, e.g.:  
